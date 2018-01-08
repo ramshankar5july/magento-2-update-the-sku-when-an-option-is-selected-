@@ -1,0 +1,86 @@
+<?php
+/**
+ * Copyright © Magento, Inc. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+
+// @codingStandardsIgnoreFile
+
+?>
+
+<?php
+/** @var $block \Magento\ConfigurableProduct\Block\Product\View\Type\Configurable*/
+$_product    = $block->getProduct();
+$_attributes = $block->decorateArray($block->getAllowAttributes());
+?>
+
+
+<?php if ($_product->isSaleable() && count($_attributes)):?>
+<div style="display:none;">
+<?php
+$id = $_product->getId();
+//echo $id.'<br/>';
+$objectManager = \Magento\Framework\App\ObjectManager::getInstance();
+$product = $objectManager->get('Magento\Framework\Registry')->registry('current_product');//get current product
+
+$productTypeInstance = $product->getTypeInstance();
+
+$usedProducts = $productTypeInstance->getUsedProducts($product);
+$skuArray = array();
+$i = 0; $j=0;
+foreach ($usedProducts  as $child) {
+    $pid = $child->getId()."</br>"; //Child Product Id  
+    //echo $child->getName()."</br>"; //Child Product Name
+    $configProduct = $objectManager->create('Magento\Catalog\Model\Product')->load($pid);
+    $skuArray[$i]['sku'] = $configProduct->getSku();
+    $skuArray[$i]['value'] = $configProduct->getCoils();
+    $i++;$j++;
+    //echo $configProduct->getSku().$configProduct->getCoils()."</br>";
+}
+//print_r($skuArray);
+echo json_encode($skuArray);
+?>
+</div>
+    <?php foreach ($_attributes as $_attribute): ?>
+        <div class="field configurable required ram">
+            <label class="label" for="attribute<?= /* @escapeNotVerified */ $_attribute->getAttributeId() ?>">
+                <span><?= $block->escapeHtml($_attribute->getProductAttribute()->getStoreLabel()) ?></span>
+            </label>
+            <div class="control">
+                <select name="super_attribute[<?= /* @escapeNotVerified */ $_attribute->getAttributeId() ?>]"
+                        data-selector="super_attribute[<?= /* @escapeNotVerified */ $_attribute->getAttributeId() ?>]"
+                        data-validate="{required:true}"
+                        id="attribute<?= /* @escapeNotVerified */ $_attribute->getAttributeId() ?>"
+                        class="super-attribute-select">
+                    <option value=""><?= /* @escapeNotVerified */ __('Choose an Option...') ?></option>
+                </select>
+            </div>
+        </div>
+    <?php endforeach; ?>
+    <script type="text/x-magento-init">
+        {
+            "#product_addtocart_form": {
+                "configurable": {
+                    "spConfig": <?= /* @escapeNotVerified */ $block->getJsonConfig() ?>,
+                    "gallerySwitchStrategy": "<?php /* @escapeNotVerified */ echo $block->getVar('gallery_switch_strategy',
+                        'Magento_ConfigurableProduct') ?: 'replace'; ?>"
+                }
+            }
+        }
+    </script>
+    <script>
+        jQuery(".configurable .control select.super-attribute-select").change(function(){
+            var selectedCountry = jQuery(".super-attribute-select option:selected").val();
+            var data = JSON.parse('<?php echo json_encode($skuArray); ?>');
+            
+            //var i, x = "";
+            jQuery.each(data, function(idx, obj) {
+                if(obj.value==selectedCountry){
+                    console.log(obj.sku);
+                    jQuery(".sku .value").text(obj.sku);
+                }
+            });
+            //console.log("You have selected the - " + selectedCountry+ typeof data);
+        });
+    </script>
+<?php endif;?>
